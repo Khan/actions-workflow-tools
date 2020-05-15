@@ -33,7 +33,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const workspace = process.cwd();
-const { runUses } = require('./uses');
+const { runUses } = require('../lib/uses');
 
 const gitChangedFiles = require('actions-utils/git-changed-files');
 const getBaseRef = require('actions-utils/get-base-ref');

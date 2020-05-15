@@ -6,7 +6,7 @@ require('@babel/register'); // flow-uncovered-line
 
 const fs = require('fs');
 const path = require('path');
-const { processFile } = require('./lib/workflow-preprocessor');
+const { processFile } = require('../lib/workflow-preprocessor');
 
 const outDir = '.github/workflows';
 const inDir = '.github/workflow-templates';

@@ -1,5 +1,5 @@
 {
-    "private": true,
+    "name": "actions-workflow-tools",
     "license": "MIT",
     "scripts": {
         "format": "prettier-eslint --write --config .prettierrc '**/*.js'",
