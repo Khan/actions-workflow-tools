@@ -33,6 +33,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const workspace = process.cwd();
+const { runUses } = require('./uses');
 
 const gitChangedFiles = require('actions-utils/git-changed-files');
 const getBaseRef = require('actions-utils/get-base-ref');
@@ -96,7 +97,7 @@ const jobText = chalk.yellow;
 const stepText = chalk.yellow;
 
 /*::
-import type {Job, Step, Workflow} from '../lib/workflow-preprocessor';
+import type {Job, Step, Workflow} from './lib/workflow-preprocessor';
 */
 
 const getJobs = (template, trigger, type, filesChanged) => {
@@ -106,15 +107,19 @@ const getJobs = (template, trigger, type, filesChanged) => {
     /* end flow-uncovered-block */
     if (
         !data.on ||
-        !data.on[trigger] ||
-        !data.on[trigger].paths ||
-        !matchPaths(data.on[trigger].paths, filesChanged)
+        (Array.isArray(data.on)
+            ? !data.on.includes(trigger)
+            : !data.on[trigger] ||
+              (data.on[trigger].paths &&
+                  !matchPaths(data.on[trigger].paths, filesChanged)))
     ) {
         debug(
             skipText(
                 `[workflow:${workflowText(
                     path.basename(template),
-                )}] Skipping, no changed paths`,
+                )}] Skipping, no changed paths ${trigger} ${JSON.stringify(
+                    data.on,
+                )}`,
             ),
         );
         return [];
@@ -164,15 +169,6 @@ const runStep = async (step /*: Step*/, filesChanged) => {
     if (step.local === false) {
         return;
     }
-    const { run } = step;
-    if (!run) {
-        debug(
-            skipText(
-                `${stepText(`[step]`)} Skipping non-run step ${step.name}`,
-            ),
-        );
-        return;
-    }
     if (step.paths) {
         if (!matchPaths(normalizePaths(step.paths), filesChanged)) {
             debug(
@@ -198,11 +194,27 @@ const runStep = async (step /*: Step*/, filesChanged) => {
             return;
         }
     }
-    console.log(stepText(`[step]`), step.name);
+    if (!step.run && !step.uses) {
+        debug(
+            skipText(
+                `${stepText(`[step]`)} Skipping non-run step ${step.name}`,
+            ),
+        );
+    }
+    console.log(stepText(`[step]`), step.name || step.uses || step.run);
+
+    if (step.run) {
+        const cwd = step['working-directory']
+            ? path.resolve(workspace, step['working-directory'])
+            : workspace;
+        await runBash(step.run, cwd);
+    } else {
+        await runUses(workspace, step.uses.replace('@', '#'), step.with);
+    }
+};
+
+const runBash = async (run, cwd) => {
     console.log(`${chalk.magenta('$')} ${run}`);
-    const cwd = step['working-directory']
-        ? path.resolve(workspace, step['working-directory'])
-        : workspace;
 
     return await new Promise((resolve, reject) => {
         const proc = spawn(run, [], {
@@ -286,7 +298,7 @@ const runJobs = async (jobs, filesChanged) => {
 
 const runType = async (type, filesChanged, verbose) => {
     console.log(chalk.green(`----- Running jobs matching '${type}' -----`));
-    const workflowDir = path.resolve(__dirname, '../../workflow-templates');
+    const workflowDir = path.resolve(workspace, '.github/workflow-templates');
     const allJobs = [];
     fs.readdirSync(workflowDir)
         .filter((name) => name.endsWith('.yml') && !name.startsWith('_'))

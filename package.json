@@ -8,28 +8,30 @@
         "test": "jest"
     },
     "dependencies": {
-        "js-yaml": "^3.13.1",
+        "actions-utils": "Khan/actions-utils#0e342e6892bb151ee6ca57696dd7d59db9b89868",
         "chalk": "^2.4.2",
-        "actions-utils": "Khan/actions-utils#gitattributes"
+        "download-git-repo": "^3.0.2",
+        "js-yaml": "^3.13.1",
+        "node-fetch": "^2.6.0"
     },
     "devDependencies": {
         "@actions/core": "^1.1.0",
         "@actions/github": "^1.1.0",
-        "babel-eslint": "^10.1.0",
-        "flow-bin": "0.92.1",
-        "jest": "^25.1.0",
-        "prettier": "1.14.2",
-        "prettier-eslint-cli": "4.7.1",
-        "eslint": "5.8.0",
-        "eslint-config-prettier": "^6.11.0",
-        "eslint-plugin-flowtype": "^4.7.0",
-        "eslint-plugin-prettier": "^3.1.3",
         "@babel/cli": "^7.8.4",
         "@babel/core": "^7.8.7",
         "@babel/preset-flow": "^7.8.3",
         "@babel/register": "^7.8.6",
         "babel-core": "^7.0.0-0",
+        "babel-eslint": "^10.1.0",
         "babel-jest": "^25.1.0",
-        "metro-react-native-babel-preset": "^0.58.0"
+        "eslint": "5.8.0",
+        "eslint-config-prettier": "^6.11.0",
+        "eslint-plugin-flowtype": "^4.7.0",
+        "eslint-plugin-prettier": "^3.1.3",
+        "flow-bin": "0.92.1",
+        "jest": "^25.1.0",
+        "metro-react-native-babel-preset": "^0.58.0",
+        "prettier": "1.14.2",
+        "prettier-eslint-cli": "4.7.1"
     }
 }
