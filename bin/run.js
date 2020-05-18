@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // @flow
+
 /**
  * This file can be used to run github action workflows locally!
  *
