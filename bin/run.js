@@ -209,9 +209,9 @@ const runStep = async (step /*: Step*/, filesChanged) => {
         const cwd = step['working-directory']
             ? path.resolve(workspace, step['working-directory'])
             : workspace;
-        await runBash(step.run, cwd);
+        return runBash(step.run, cwd);
     } else if (step.uses) {
-        await runUses(workspace, step.uses.replace('@', '#'), step.with);
+        return runUses(workspace, step.uses.replace('@', '#'), step.with);
     }
 };
 
@@ -315,7 +315,7 @@ const runType = async (type, filesChanged, verbose) => {
         });
 
     if (!allJobs.length) {
-        console.error(errorText(`No jobs matching ${type}`));
+        console.error(skipText(`No jobs matching ${type}`));
         console.log();
         return 0;
     } else {
