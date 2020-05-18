@@ -324,7 +324,14 @@ const runType = async (type, filesChanged, verbose) => {
 
 const run = async (types) => {
     const startTime = Date.now();
-    const baseRef = await getBaseRef();
+    let baseRef = await getBaseRef();
+    if (!baseRef) {
+        console.error(
+            chalk.yellow(`Warning: `) +
+                `Unable to determine the base ref for this branch. Using HEAD`,
+        );
+        baseRef = 'HEAD';
+    }
     process.env.GITHUB_BASE_REF = baseRef;
     const filesChanged = (await gitChangedFiles(baseRef, workspace)).map(
         (fullpath) => path.relative(workspace, fullpath),

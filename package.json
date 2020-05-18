@@ -7,8 +7,12 @@
         "lint": "../../react-native/node_modules/.bin/eslint .",
         "test": "jest"
     },
+    "bin": {
+        "actions": "./bin/run.js",
+        "make-workflows": "./bin/make-workflows.js"
+    },
     "dependencies": {
-        "actions-utils": "Khan/actions-utils#0e342e6892bb151ee6ca57696dd7d59db9b89868",
+        "actions-utils": "Khan/actions-utils#7bd824543f23b90b3908caae0a1ef1088d7ea67f",
         "chalk": "^2.4.2",
         "download-git-repo": "^3.0.2",
         "js-yaml": "^3.13.1",
