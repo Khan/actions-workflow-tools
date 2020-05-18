@@ -101,11 +101,16 @@ const stepText = chalk.yellow;
 import type {Job, Step, Workflow} from '../lib/workflow-preprocessor';
 */
 
-const getJobs = (template, trigger, type, filesChanged) => {
-    const raw = fs.readFileSync(template, 'utf8');
+const loadWorkflow = (fileName) => {
+    const raw = fs.readFileSync(fileName, 'utf8');
     /* flow-uncovered-block */
     const data /*: Workflow*/ = /*:: (*/ yaml.safeLoad(raw) /* :: :any) */;
     /* end flow-uncovered-block */
+    return data;
+};
+
+const getJobs = (template, trigger, type, filesChanged) => {
+    const data = loadWorkflow(template);
     if (
         !data.on ||
         (Array.isArray(data.on)
@@ -299,6 +304,54 @@ const runJobs = async (jobs, filesChanged) => {
     return errors;
 };
 
+const findStepsInWorkflow = (workflow, stepId) => {
+    const steps = [];
+    Object.keys(workflow.jobs).forEach((jobId) => {
+        workflow.jobs[jobId].steps.forEach((step) => {
+            if (step.id === stepId) {
+                steps.push(step);
+            }
+        });
+    });
+    return steps;
+};
+
+const findNamedSteps = (name, verbose) => {
+    const workflowDir = path.resolve(workspace, '.github/workflow-templates');
+    const steps = [];
+
+    const parts = name.split(':');
+    if (parts.length == 2 && parts[0].endsWith('.yml')) {
+        const data = loadWorkflow(path.join(workflowDir, parts[0]));
+        steps.push(...findStepsInWorkflow(data, parts[1]));
+    } else {
+        fs.readdirSync(workflowDir)
+            .filter((name) => name.endsWith('.yml') && !name.startsWith('_'))
+            .forEach((fileName) => {
+                const data = loadWorkflow(path.join(workflowDir, fileName));
+                steps.push(...findStepsInWorkflow(data, name));
+            });
+    }
+    return steps;
+};
+
+const runNamedStep = async (name, verbose, filesChanged) => {
+    const steps = findNamedSteps(name, verbose);
+    if (!steps.length) {
+        console.error(skipText(`No steps matching ${name}`));
+        console.log();
+        return 0;
+    }
+    let errors = 0;
+    for (const step of steps) {
+        const result = await runStep(step, filesChanged);
+        if (result) {
+            errors += result.errors;
+        }
+    }
+    return errors;
+};
+
 const runType = async (type, filesChanged, verbose) => {
     console.log(chalk.green(`----- Running jobs matching '${type}' -----`));
     const workflowDir = path.resolve(workspace, '.github/workflow-templates');
@@ -325,7 +378,7 @@ const runType = async (type, filesChanged, verbose) => {
     }
 };
 
-const run = async (types) => {
+const run = async (args) => {
     const startTime = Date.now();
     let baseRef = await getBaseRef();
     if (!baseRef) {
@@ -339,10 +392,30 @@ const run = async (types) => {
     const filesChanged = (await gitChangedFiles(baseRef, workspace)).map(
         (fullpath) => path.relative(workspace, fullpath),
     );
+
     let errors = 0;
-    for (const type of types) {
-        errors += await runType(type, filesChanged);
+
+    if (args[0] === 'step') {
+        errors += await runNamedStep(args[1], _verbose, filesChanged);
+    } else {
+        const types = [];
+        args.forEach((arg) => {
+            if (typeAliases[arg]) {
+                types.push(...typeAliases[arg]);
+            } else {
+                types.push(arg);
+            }
+        });
+
+        if (!types.length) {
+            types.push(...typeAliases['prepare']);
+        }
+
+        for (const type of types) {
+            errors += await runType(type, filesChanged);
+        }
     }
+
     const time = `Finished in ${(Date.now() - startTime) / 1000}s`;
     if (errors === 0) {
         console.log(chalk.green(`✅  All clear! ${time}  ✅`));
@@ -390,21 +463,8 @@ ${Object.keys(typeAliases)
 
 _verbose = opts['-v'] || opts['--verbose'];
 
-const types = [];
-args.forEach((arg) => {
-    if (typeAliases[arg]) {
-        types.push(...typeAliases[arg]);
-    } else {
-        types.push(arg);
-    }
-});
-
-if (!types.length) {
-    types.push(...typeAliases['prepare']);
-}
-
 // flow-next-uncovered-line
-run(types).catch((err) => {
+run(args).catch((err) => {
     console.error(
         chalk.red('An unexpected error occurred! Please report this bug.'),
     );
