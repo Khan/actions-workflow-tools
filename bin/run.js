@@ -97,7 +97,7 @@ const jobText = chalk.yellow;
 const stepText = chalk.yellow;
 
 /*::
-import type {Job, Step, Workflow} from './lib/workflow-preprocessor';
+import type {Job, Step, Workflow} from '../lib/workflow-preprocessor';
 */
 
 const getJobs = (template, trigger, type, filesChanged) => {
@@ -197,7 +197,9 @@ const runStep = async (step /*: Step*/, filesChanged) => {
     if (!step.run && !step.uses) {
         debug(
             skipText(
-                `${stepText(`[step]`)} Skipping non-run step ${step.name}`,
+                `${stepText(`[step]`)} Skipping non-run non-uses step ${
+                    step.name
+                }`,
             ),
         );
     }
@@ -208,7 +210,7 @@ const runStep = async (step /*: Step*/, filesChanged) => {
             ? path.resolve(workspace, step['working-directory'])
             : workspace;
         await runBash(step.run, cwd);
-    } else {
+    } else if (step.uses) {
         await runUses(workspace, step.uses.replace('@', '#'), step.with);
     }
 };

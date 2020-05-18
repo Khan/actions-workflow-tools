@@ -34,5 +34,5 @@ jobs:
           eslint-lib: ./node_modules/eslint
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: yarn flow
+      - run: yarn flow --color always
         setup: yarn
