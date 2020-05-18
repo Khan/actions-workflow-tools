@@ -304,12 +304,31 @@ const runJobs = async (jobs, filesChanged) => {
     return errors;
 };
 
-const findStepsInWorkflow = (workflow, stepId) => {
+/**
+ * Fuzzy match to find the step you want.
+ * If your input directly matches a step's `id`, go with that.
+ * Otherwise, fuzzy match on the "step repo" for steps that use a repo.
+ */
+const findStepsInWorkflow = (workflow, needle) => {
     const steps = [];
     Object.keys(workflow.jobs).forEach((jobId) => {
         workflow.jobs[jobId].steps.forEach((step) => {
-            if (step.id === stepId) {
-                steps.push(step);
+            if (step.id === needle) {
+                steps.push({ sort: 0, step });
+            } else if (step.uses) {
+                const repo = step.uses.split('@')[0];
+                const [owner, name] = repo.split('/');
+                if (repo.toLowerCase() === needle.toLowerCase()) {
+                    steps.push({ sort: 1, step });
+                } else if (name.toLowerCase() === needle.toLowerCase()) {
+                    steps.push({ sort: 2, step });
+                } else if (
+                    name.toLowerCase().startsWith(needle.toLowerCase())
+                ) {
+                    // sort is better for shorter names, because the needle will have
+                    // matched more of it
+                    steps.push({ sort: 2 + name.length, step });
+                }
             }
         });
     });
@@ -336,20 +355,31 @@ const findNamedSteps = (name, verbose) => {
 };
 
 const runNamedStep = async (name, verbose, filesChanged) => {
-    const steps = findNamedSteps(name, verbose);
+    const steps /*:Array<{sort: number, step: Step}>*/ = findNamedSteps(
+        name,
+        verbose,
+    );
     if (!steps.length) {
         console.error(skipText(`No steps matching ${name}`));
         console.log();
         return 0;
     }
-    let errors = 0;
-    for (const step of steps) {
-        const result = await runStep(step, filesChanged);
-        if (result) {
-            errors += result.errors;
-        }
+    if (steps.length > 1) {
+        console.log(
+            skipText(
+                `${
+                    steps.length
+                } steps found matching ${name}, selecting the best match.`,
+            ),
+        );
     }
-    return errors;
+    // lower sort is better
+    steps.sort((a, b) => a.sort - b.sort);
+    const result = await runStep(steps[0].step, filesChanged);
+    if (!result) {
+        return 0;
+    }
+    return result.errors;
 };
 
 const runType = async (type, filesChanged, verbose) => {

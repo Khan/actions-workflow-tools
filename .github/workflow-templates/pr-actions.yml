@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: Khan/flow-coverage-action@2d18e7cda7142361a1629a3aca95df985db0a432
-        id: flow-coverage
         setup: yarn
         with:
           flow-bin: ./node_modules/.bin/flow
