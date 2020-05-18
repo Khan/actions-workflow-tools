@@ -28,11 +28,11 @@ jobs:
           jest-bin: ./node_modules/.bin/jest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: Khan/eslint-action@master
+      - uses: Khan/eslint-action@ff7d61c30ef76233dc9e40702dcb965f5647fe9e
         setup: yarn
         with:
           eslint-lib: ./node_modules/eslint
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: yarn flow --color always
+      - run: yarn flow --color always --quiet
         setup: yarn
