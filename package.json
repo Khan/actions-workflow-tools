@@ -5,7 +5,7 @@
     "scripts": {
         "format": "prettier-eslint --write --config .prettierrc '**/*.js'",
         "format-files": "prettier-eslint --write --config .prettierrc",
-        "lint": "../../react-native/node_modules/.bin/eslint .",
+        "lint": "./node_modules/.bin/eslint .",
         "test": "jest"
     },
     "bin": {
@@ -13,7 +13,7 @@
         "make-workflows": "./bin/make-workflows.js"
     },
     "dependencies": {
-        "actions-utils": "Khan/actions-utils#v1.0.0",
+        "actions-utils": "Khan/actions-utils#v1.1.0",
         "chalk": "^2.4.2",
         "download-git-repo": "^3.0.2",
         "js-yaml": "^3.13.1",
