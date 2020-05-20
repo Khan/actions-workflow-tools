@@ -13,7 +13,7 @@
         "make-workflows": "./bin/make-workflows.js"
     },
     "dependencies": {
-        "actions-utils": "Khan/actions-utils#7bd824543f23b90b3908caae0a1ef1088d7ea67f",
+        "actions-utils": "Khan/actions-utils#v1.0.0",
         "chalk": "^2.4.2",
         "download-git-repo": "^3.0.2",
         "js-yaml": "^3.13.1",
