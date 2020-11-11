@@ -309,11 +309,17 @@ const runJobs = async (jobs, filesChanged) => {
  * If your input directly matches a step's `id`, go with that.
  * Otherwise, fuzzy match on the "step repo" for steps that use a repo.
  */
-const findStepsInWorkflow = (workflow, needle) => {
+const findStepsInWorkflow = (workflow, needle, verbose) => {
     const steps = [];
     Object.keys(workflow.jobs).forEach((jobId) => {
+        if (verbose) {
+            console.log(skipText(`Checking job ${jobId}`));
+        }
         workflow.jobs[jobId].steps.forEach((step) => {
-            if (step.id === needle) {
+            if (verbose) {
+                console.log(skipText(`Checking step [${step.id || 'no id'}] ${step.name || 'no name'}`));
+            }
+            if (step.id === needle || step.name === needle) {
                 steps.push({ sort: 0, step });
             } else if (step.uses) {
                 const repo = step.uses.split('@')[0];
@@ -341,14 +347,15 @@ const findNamedSteps = (name, verbose) => {
 
     const parts = name.split(':');
     if (parts.length == 2 && parts[0].endsWith('.yml')) {
+        console.log('yep', parts[0])
         const data = loadWorkflow(path.join(workflowDir, parts[0]));
-        steps.push(...findStepsInWorkflow(data, parts[1]));
+        steps.push(...findStepsInWorkflow(data, parts[1], verbose));
     } else {
         fs.readdirSync(workflowDir)
             .filter((name) => name.endsWith('.yml') && !name.startsWith('_'))
             .forEach((fileName) => {
                 const data = loadWorkflow(path.join(workflowDir, fileName));
-                steps.push(...findStepsInWorkflow(data, name));
+                steps.push(...findStepsInWorkflow(data, name, verbose));
             });
     }
     return steps;
