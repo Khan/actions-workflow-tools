@@ -33,11 +33,22 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const workspace = process.cwd();
+
 const { runUses } = require('../lib/uses');
 
 const gitChangedFiles = require('actions-utils/git-changed-files');
 const getBaseRef = require('actions-utils/get-base-ref');
+
+// Walk up file system until we find the "workspace root", which must have a `.github/workflow-templates` directory.
+let workspace = process.cwd();
+while (!fs.existsSync(path.join(workspace, '.github/workflow-templates'))) {
+    if (workspace === '/') {
+        throw new Error(
+            `Unable to determine "workspace" -- no '.github/workflow-templates' directory found in parent directories of ${process.cwd()}`,
+        );
+    }
+    workspace = path.dirname(workspace);
+}
 
 let _verbose = false;
 
@@ -310,6 +321,7 @@ const runJobs = async (jobs, filesChanged) => {
  * Otherwise, fuzzy match on the "step repo" for steps that use a repo.
  */
 const findStepsInWorkflow = (workflow, needle, exact, verbose) => {
+    const needleRegexp = new RegExp('\\b' + escapeRegExp(needle) + '\\b', 'i');
     const steps = [];
     Object.keys(workflow.jobs).forEach((jobId) => {
         if (verbose) {
@@ -329,8 +341,8 @@ const findStepsInWorkflow = (workflow, needle, exact, verbose) => {
                     steps.push({ sort: 0, step });
                 }
             } else if (
-                (step.id && step.id.includes(needle.toLowerCase())) ||
-                step.name.toLowerCase().includes(needle.toLowerCase())
+                needleRegexp.test(step.id || '') ||
+                needleRegexp.test(step.name || '')
             ) {
                 steps.push({ sort: 0, step });
             } else if (step.uses) {
@@ -387,7 +399,7 @@ const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
     if (all) {
         let allErrors = 0;
         for (let { step } of steps) {
-            const result = await runStep(steps[0].step, filesChanged);
+            const result = await runStep(step, filesChanged);
             if (result) {
                 allErrors += result.errors;
             }
@@ -395,6 +407,8 @@ const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
         return allErrors;
     }
 
+    // lower sort is better
+    steps.sort((a, b) => a.sort - b.sort);
     if (steps.length > 1) {
         console.log(
             skipText(
@@ -404,12 +418,15 @@ const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
             ),
         );
         console.log(skipText('All matching steps:'));
-        steps.forEach(({ step }) => {
-            console.log(skipText(`- ${step.name}`));
+        steps.forEach(({ step }, i) => {
+            console.log(
+                skipText(
+                    `- ${step.name}`,
+                    i === 0 ? chalk.green('(selected)') : '',
+                ),
+            );
         });
     }
-    // lower sort is better
-    steps.sort((a, b) => a.sort - b.sort);
     const result = await runStep(steps[0].step, filesChanged);
     if (!result) {
         return 0;
@@ -528,6 +545,13 @@ Aliases:
 ${Object.keys(typeAliases)
         .map((key) => `- ${key}: ${typeAliases[key].join(' ')}`)
         .join('\n')}
+
+Running individual steps: step {options} [step-id-or-name-substring]
+Options:
+    --all       run all steps that match the substring instead of just the first one
+    --exact     match the step id or name exactly
+
+Note that substrings are restricted to word boundaries, e.g. 'flow' won't match 'workflows'.
 `);
     process.exit(1);
 }
