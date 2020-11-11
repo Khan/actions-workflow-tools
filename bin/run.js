@@ -309,7 +309,7 @@ const runJobs = async (jobs, filesChanged) => {
  * If your input directly matches a step's `id`, go with that.
  * Otherwise, fuzzy match on the "step repo" for steps that use a repo.
  */
-const findStepsInWorkflow = (workflow, needle, verbose) => {
+const findStepsInWorkflow = (workflow, needle, exact, verbose) => {
     const steps = [];
     Object.keys(workflow.jobs).forEach((jobId) => {
         if (verbose) {
@@ -317,9 +317,21 @@ const findStepsInWorkflow = (workflow, needle, verbose) => {
         }
         workflow.jobs[jobId].steps.forEach((step) => {
             if (verbose) {
-                console.log(skipText(`Checking step [${step.id || 'no id'}] ${step.name || 'no name'}`));
+                console.log(
+                    skipText(
+                        `Checking step [${step.id || 'no id'}] ${step.name ||
+                            'no name'}`,
+                    ),
+                );
             }
-            if (step.id === needle || step.name === needle) {
+            if (exact) {
+                if (step.id === needle || step.name === needle) {
+                    steps.push({ sort: 0, step });
+                }
+            } else if (
+                (step.id && step.id.includes(needle.toLowerCase())) ||
+                step.name.toLowerCase().includes(needle.toLowerCase())
+            ) {
                 steps.push({ sort: 0, step });
             } else if (step.uses) {
                 const repo = step.uses.split('@')[0];
@@ -341,29 +353,30 @@ const findStepsInWorkflow = (workflow, needle, verbose) => {
     return steps;
 };
 
-const findNamedSteps = (name, verbose) => {
+const findNamedSteps = (name, exact, verbose) => {
     const workflowDir = path.resolve(workspace, '.github/workflow-templates');
     const steps = [];
 
     const parts = name.split(':');
     if (parts.length == 2 && parts[0].endsWith('.yml')) {
-        console.log('yep', parts[0])
+        console.log('yep', parts[0]);
         const data = loadWorkflow(path.join(workflowDir, parts[0]));
-        steps.push(...findStepsInWorkflow(data, parts[1], verbose));
+        steps.push(...findStepsInWorkflow(data, parts[1], exact, verbose));
     } else {
         fs.readdirSync(workflowDir)
             .filter((name) => name.endsWith('.yml') && !name.startsWith('_'))
             .forEach((fileName) => {
                 const data = loadWorkflow(path.join(workflowDir, fileName));
-                steps.push(...findStepsInWorkflow(data, name, verbose));
+                steps.push(...findStepsInWorkflow(data, name, exact, verbose));
             });
     }
     return steps;
 };
 
-const runNamedStep = async (name, verbose, filesChanged) => {
+const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
     const steps /*:Array<{sort: number, step: Step}>*/ = findNamedSteps(
         name,
+        exact,
         verbose,
     );
     if (!steps.length) {
@@ -371,14 +384,29 @@ const runNamedStep = async (name, verbose, filesChanged) => {
         console.log();
         return 0;
     }
+    if (all) {
+        let allErrors = 0;
+        for (let { step } of steps) {
+            const result = await runStep(steps[0].step, filesChanged);
+            if (result) {
+                allErrors += result.errors;
+            }
+        }
+        return allErrors;
+    }
+
     if (steps.length > 1) {
         console.log(
             skipText(
                 `${
                     steps.length
-                } steps found matching ${name}, selecting the best match.`,
+                } steps found matching ${name}, selecting the best match. To run a particular step, use --exact, and specify the full name of the step. Alternatively, use --all to run all matching steps.`,
             ),
         );
+        console.log(skipText('All matching steps:'));
+        steps.forEach(({ step }) => {
+            console.log(skipText(`- ${step.name}`));
+        });
     }
     // lower sort is better
     steps.sort((a, b) => a.sort - b.sort);
@@ -415,7 +443,7 @@ const runType = async (type, filesChanged, verbose) => {
     }
 };
 
-const run = async (args) => {
+const run = async (args, opts) => {
     const startTime = Date.now();
     let baseRef = await getBaseRef();
     if (!baseRef) {
@@ -433,7 +461,13 @@ const run = async (args) => {
     let errors = 0;
 
     if (args[0] === 'step') {
-        errors += await runNamedStep(args[1], _verbose, filesChanged);
+        errors += await runNamedStep(
+            args[1],
+            opts['--exact'],
+            opts['--all'],
+            _verbose,
+            filesChanged,
+        );
     } else {
         const types = [];
         args.forEach((arg) => {
@@ -501,7 +535,7 @@ ${Object.keys(typeAliases)
 _verbose = opts['-v'] || opts['--verbose'];
 
 // flow-next-uncovered-line
-run(args).catch((err) => {
+run(args, opts).catch((err) => {
     console.error(
         chalk.red('An unexpected error occurred! Please report this bug.'),
     );
