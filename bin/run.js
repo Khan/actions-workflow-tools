@@ -207,13 +207,14 @@ const runStep = async (step /*: Step*/, filesChanged) => {
   }
   console.log(stepText(`[step]`), step.name || step.uses || step.run);
 
+  const cwd = step["working-directory"]
+      ? path.resolve(topLevel, step["working-directory"])//path.resolve(workspace, step["working-directory"])
+      : topLevel;//workspace;
+
   if (step.run) {
-    const cwd = step["working-directory"]
-      ? path.resolve(workspace, step["working-directory"])
-      : workspace;
     return runBash(step.run, cwd);
   } else if (step.uses) {
-    return runUses(topLevel, step.uses.replace("@", "#"), step.with);
+    return runUses(cwd, step.uses.replace("@", "#"), step.with);
   }
 };
 
