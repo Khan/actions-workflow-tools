@@ -35,12 +35,13 @@ const path = require("path");
 const { spawn } = require("child_process");
 const { execSync } = require("child_process");
 const workspace = process.cwd();
-const topLevel = execSync('git rev-parse --show-toplevel').toString('utf8').trim();
+const topLevel = execSync("git rev-parse --show-toplevel")
+  .toString("utf8")
+  .trim();
 const { runUses } = require("../lib/uses");
 
 const gitChangedFiles = require("actions-utils/git-changed-files");
 const getBaseRef = require("actions-utils/get-base-ref");
-
 
 let _verbose = false;
 
