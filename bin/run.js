@@ -33,7 +33,8 @@ const yaml = require('js-yaml');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const workspace = process.cwd();
+const { execSync } = require('child_process');
+const workspace = execSync('git rev-parse --show-toplevel').toString('utf8').trim();//process.cwd();
 const { runUses } = require('../lib/uses');
 
 const gitChangedFiles = require('actions-utils/git-changed-files');
