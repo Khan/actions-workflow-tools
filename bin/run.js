@@ -34,7 +34,6 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 const { execSync } = require("child_process");
-const workspace = process.cwd();
 const topLevel = execSync("git rev-parse --show-toplevel")
   .toString("utf8")
   .trim();
@@ -208,8 +207,8 @@ const runStep = async (step /*: Step*/, filesChanged) => {
   console.log(stepText(`[step]`), step.name || step.uses || step.run);
 
   const cwd = step["working-directory"]
-    ? path.resolve(topLevel, step["working-directory"]) //path.resolve(workspace, step["working-directory"])
-    : topLevel; //workspace;
+    ? path.resolve(topLevel, step["working-directory"])
+    : topLevel;
 
   if (step.run) {
     return runBash(step.run, cwd);
