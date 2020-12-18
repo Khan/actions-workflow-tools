@@ -34,13 +34,13 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 const { execSync } = require("child_process");
-const workspace = execSync("git rev-parse --show-toplevel")
-  .toString("utf8")
-  .trim(); //process.cwd();
+const workspace = process.cwd();
+const topLevel = execSync('git rev-parse --show-toplevel').toString('utf8').trim();
 const { runUses } = require("../lib/uses");
 
 const gitChangedFiles = require("actions-utils/git-changed-files");
 const getBaseRef = require("actions-utils/get-base-ref");
+
 
 let _verbose = false;
 
@@ -327,7 +327,7 @@ const findStepsInWorkflow = (workflow, needle) => {
 };
 
 const findNamedSteps = (name, verbose) => {
-  const workflowDir = path.resolve(workspace, ".github/workflow-templates");
+  const workflowDir = path.resolve(topLevel, ".github/workflow-templates");
   const steps = [];
 
   const parts = name.split(":");
@@ -375,7 +375,7 @@ const runNamedStep = async (name, verbose, filesChanged) => {
 
 const runType = async (type, filesChanged, verbose) => {
   console.log(chalk.green(`----- Running jobs matching '${type}' -----`));
-  const workflowDir = path.resolve(workspace, ".github/workflow-templates");
+  const workflowDir = path.resolve(topLevel, ".github/workflow-templates");
   const allJobs = [];
   fs.readdirSync(workflowDir)
     .filter(name => name.endsWith(".yml") && !name.startsWith("_"))
