@@ -213,7 +213,7 @@ const runStep = async (step /*: Step*/, filesChanged) => {
       : workspace;
     return runBash(step.run, cwd);
   } else if (step.uses) {
-    return runUses(workspace, step.uses.replace("@", "#"), step.with);
+    return runUses(topLevel, step.uses.replace("@", "#"), step.with);
   }
 };
 
