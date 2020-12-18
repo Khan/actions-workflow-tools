@@ -208,8 +208,8 @@ const runStep = async (step /*: Step*/, filesChanged) => {
   console.log(stepText(`[step]`), step.name || step.uses || step.run);
 
   const cwd = step["working-directory"]
-      ? path.resolve(topLevel, step["working-directory"])//path.resolve(workspace, step["working-directory"])
-      : topLevel;//workspace;
+    ? path.resolve(topLevel, step["working-directory"]) //path.resolve(workspace, step["working-directory"])
+    : topLevel; //workspace;
 
   if (step.run) {
     return runBash(step.run, cwd);
