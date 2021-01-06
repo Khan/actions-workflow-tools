@@ -33,22 +33,14 @@ const yaml = require("js-yaml");
 const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
-
+const { execSync } = require("child_process");
+const topLevel = execSync("git rev-parse --show-toplevel")
+  .toString("utf8")
+  .trim();
 const { runUses } = require("../lib/uses");
 
 const gitChangedFiles = require("actions-utils/git-changed-files");
 const getBaseRef = require("actions-utils/get-base-ref");
-
-// Walk up file system until we find the "workspace root", which must have a `.github/workflow-templates` directory.
-let workspace = process.cwd();
-while (!fs.existsSync(path.join(workspace, ".github/workflow-templates"))) {
-  if (workspace === "/") {
-    throw new Error(
-      `Unable to determine "workspace" -- no '.github/workflow-templates' directory found in parent directories of ${process.cwd()}`
-    );
-  }
-  workspace = path.dirname(workspace);
-}
 
 let _verbose = false;
 
@@ -214,13 +206,14 @@ const runStep = async (step /*: Step*/, filesChanged) => {
   }
   console.log(stepText(`[step]`), step.name || step.uses || step.run);
 
+  const cwd = step["working-directory"]
+    ? path.resolve(topLevel, step["working-directory"])
+    : topLevel;
+
   if (step.run) {
-    const cwd = step["working-directory"]
-      ? path.resolve(workspace, step["working-directory"])
-      : workspace;
     return runBash(step.run, cwd);
   } else if (step.uses) {
-    return runUses(workspace, step.uses.replace("@", "#"), step.with);
+    return runUses(cwd, step.uses.replace("@", "#"), step.with);
   }
 };
 
@@ -353,7 +346,7 @@ const findStepsInWorkflow = (workflow, needle, exact, verbose) => {
 };
 
 const findNamedSteps = (name, exact, verbose) => {
-  const workflowDir = path.resolve(workspace, ".github/workflow-templates");
+  const workflowDir = path.resolve(topLevel, ".github/workflow-templates");
   const steps = [];
 
   const parts = name.split(":");
@@ -420,7 +413,7 @@ const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
 
 const runType = async (type, filesChanged, verbose) => {
   console.log(chalk.green(`----- Running jobs matching '${type}' -----`));
-  const workflowDir = path.resolve(workspace, ".github/workflow-templates");
+  const workflowDir = path.resolve(topLevel, ".github/workflow-templates");
   const allJobs = [];
   fs.readdirSync(workflowDir)
     .filter(name => name.endsWith(".yml") && !name.startsWith("_"))
@@ -455,8 +448,8 @@ const run = async (args, opts) => {
     baseRef = "HEAD";
   }
   process.env.GITHUB_BASE_REF = baseRef;
-  const filesChanged = (await gitChangedFiles(baseRef, workspace)).map(
-    fullpath => path.relative(workspace, fullpath)
+  const filesChanged = (await gitChangedFiles(baseRef, topLevel)).map(
+    fullpath => path.relative(topLevel, fullpath)
   );
 
   let errors = 0;
