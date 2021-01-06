@@ -208,14 +208,14 @@ const runStep = async (step /*: Step*/, filesChanged) => {
 
   if (step.run) {
     const workingDir = step["working-directory"]
-      ? path.resolve(topLevel, step["working-directory"])
-      : topLevel;
+        ? path.resolve(topLevel, step["working-directory"])
+        : topLevel;
 
     return runBash(step.run, workingDir);
   } else if (step.uses) {
     const cacheDir = step["local_cache_directory"]
-      ? path.resolve(topLevel, step["local_cache_directory"])
-      : topLevel;
+        ? path.resolve(topLevel, step["local_cache_directory"])
+        : topLevel;
 
     return runUses(topLevel, cacheDir, step.uses.replace("@", "#"), step.with);
   }
