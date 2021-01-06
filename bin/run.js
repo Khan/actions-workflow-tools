@@ -448,7 +448,7 @@ const run = async (args, opts) => {
     baseRef = "HEAD";
   }
   process.env.GITHUB_BASE_REF = baseRef;
-  const filesChanged = (await gitChangedFiles(baseRef, workspace)).map(
+  const filesChanged = (await gitChangedFiles(baseRef, topLevel)).map(
     fullpath => path.relative(topLevel, fullpath)
   );
 
