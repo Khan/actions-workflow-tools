@@ -32,13 +32,12 @@ const chalk = require("chalk");
 const yaml = require("js-yaml");
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
 const { execSync } = require("child_process");
 const topLevel = execSync("git rev-parse --show-toplevel")
   .toString("utf8")
   .trim();
 const { runUses } = require("../lib/uses");
-const { handleOutputData } = require("../lib/utils");
+const { runProcess } = require("../lib/utils");
 
 const gitChangedFiles = require("actions-utils/git-changed-files");
 const getBaseRef = require("actions-utils/get-base-ref");
@@ -212,7 +211,7 @@ const runStep = async (step /*: Step*/, filesChanged) => {
 const runBash = async (run, cwd) => {
   console.log(`${chalk.magenta("$")} ${run}`);
 
-  return await handleOutputData(run, [], {
+  return await runProcess(run, [], {
     shell: true,
     cwd,
     /* flow-uncovered-block */
