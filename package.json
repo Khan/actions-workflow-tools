@@ -1,6 +1,6 @@
 {
     "name": "actions-workflow-tools",
-    "version": "1.2.0",
+    "version": "1.2.3",
     "license": "MIT",
     "scripts": {
         "format": "prettier-eslint --write --config .prettierrc '**/*.js'",
@@ -13,7 +13,7 @@
         "make-workflows": "./bin/make-workflows.js"
     },
     "dependencies": {
-        "actions-utils": "Khan/actions-utils#v1.2.2",
+        "actions-utils": "Khan/actions-utils#v1.2.3",
         "chalk": "^2.4.2",
         "download-git-repo": "^3.0.2",
         "js-yaml": "^3.13.1",
