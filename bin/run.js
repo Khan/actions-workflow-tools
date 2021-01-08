@@ -124,7 +124,8 @@ const getJobs = (template, trigger, type, filesChanged) => {
       skipText(
         `[workflow:${workflowText(
           path.basename(template)
-        )}] Skipping, no changed paths ${trigger} ${JSON.stringify(data.on)}`
+        )}] Skipping, no changed paths ${trigger} ${JSON.stringify(data.on) ||
+          ""}`
       )
     );
     return [];
