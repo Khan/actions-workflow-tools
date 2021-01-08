@@ -212,20 +212,16 @@ const runStep = async (step /*: Step*/, filesChanged) => {
 const runBash = async (run, cwd) => {
   console.log(`${chalk.magenta("$")} ${run}`);
 
-  return await new Promise((resolve, reject) => {
-    const proc = spawn(run, [], {
-      shell: true,
-      cwd,
-      /* flow-uncovered-block */
-      env: {
-        ...process.env,
-        // So any actions using `chalk` will still colorize for us
-        FORCE_COLOR: 1
-      }
-      /* end flow-uncovered-block */
-    });
-
-    handleOutputData(proc, resolve);
+  return await handleOutputData(run, [], {
+    shell: true,
+    cwd,
+    /* flow-uncovered-block */
+    env: {
+      ...process.env,
+      // So any actions using `chalk` will still colorize for us
+      FORCE_COLOR: 1
+    }
+    /* end flow-uncovered-block */
   });
 };
 
