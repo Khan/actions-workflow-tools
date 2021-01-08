@@ -32,12 +32,12 @@ const chalk = require("chalk");
 const yaml = require("js-yaml");
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
 const { execSync } = require("child_process");
 const topLevel = execSync("git rev-parse --show-toplevel")
   .toString("utf8")
   .trim();
 const { runUses } = require("../lib/uses");
+const { runProcess } = require("../lib/utils");
 
 const gitChangedFiles = require("actions-utils/git-changed-files");
 const getBaseRef = require("actions-utils/get-base-ref");
@@ -157,19 +157,6 @@ const getJobs = (template, trigger, type, filesChanged) => {
 const normalizePaths = (paths /*: string | Array<string> */) =>
   typeof paths === "string" ? [paths] : paths;
 
-const indent = (text /*: string*/) => {
-  return "|  " + text.replace(/\n(?!$)/g, "\n|  ");
-};
-
-const countInstances = (rx, text /*:string*/) => {
-  let num = 0;
-  text.replace(rx, () => {
-    num += 1;
-    return "";
-  });
-  return num;
-};
-
 const runStep = async (step /*: Step*/, filesChanged) => {
   if (step.local === false) {
     return;
@@ -224,44 +211,16 @@ const runStep = async (step /*: Step*/, filesChanged) => {
 const runBash = async (run, cwd) => {
   console.log(`${chalk.magenta("$")} ${run}`);
 
-  return await new Promise((resolve, reject) => {
-    const proc = spawn(run, [], {
-      shell: true,
-      cwd,
-      /* flow-uncovered-block */
-      env: {
-        ...process.env,
-        // So any actions using `chalk` will still colorize for us
-        FORCE_COLOR: 1
-      }
-      /* end flow-uncovered-block */
-    });
-
-    let errors = 0;
-    const errorRx = /^:error:/gm;
-
-    proc.stdout.on("data", (data /*:Buffer*/) => {
-      const text = data.toString("utf8");
-      errors += countInstances(errorRx, text);
-      process.stdout.write(indent(text));
-    });
-
-    proc.stderr.on("data", (data /*:Buffer*/) => {
-      const text = data.toString("utf8");
-      errors += countInstances(errorRx, text);
-      // We use stdout for the stderr as well to avoid interleaving
-      // issues.
-      process.stdout.write(indent(text));
-    });
-
-    proc.on("close", (code /*:number*/) => {
-      if (code === 0) {
-        resolve({ errors, failed: false });
-      } else {
-        console.log(`child process exited with code ${code}`);
-        resolve({ errors, failed: true });
-      }
-    });
+  return await runProcess(run, [], {
+    shell: true,
+    cwd,
+    /* flow-uncovered-block */
+    env: {
+      ...process.env,
+      // So any actions using `chalk` will still colorize for us
+      FORCE_COLOR: 1
+    }
+    /* end flow-uncovered-block */
   });
 };
 
