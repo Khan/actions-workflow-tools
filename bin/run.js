@@ -310,6 +310,23 @@ const findNamedSteps = (name, exact, verbose) => {
     return steps;
 };
 
+const getJobsWithAlaises = args => {
+    const types = [];
+    args.forEach(arg => {
+        if (typeAliases[arg]) {
+            types.push(...typeAliases[arg]);
+        } else {
+            types.push(arg);
+        }
+    });
+
+    if (!types.length) {
+        types.push(...typeAliases['prepare']);
+    }
+
+    return types;
+};
+
 const runSteps = async (steps, name, all, filesChanged) => {
     if (all) {
         let allErrors = 0;
@@ -379,20 +396,7 @@ const run = async (args, opts) => {
     let errors = 0;
 
     if (args[0] === 'job' || !args.length) {
-        const types = [];
-        args.slice(1).forEach(arg => {
-            if (typeAliases[arg]) {
-                types.push(...typeAliases[arg]);
-            } else {
-                types.push(arg);
-            }
-        });
-
-        if (!types.length) {
-            types.push(...typeAliases['prepare']);
-        }
-
-        for (const type of types) {
+        for (const type of getJobsWithAlaises(args.slice(1))) {
             const jobs = getJobsByType(type, filesChanged);
             console.log(chalk.green(`----- Running ${jobs.length} jobs matching '${type}' -----`));
             console.log();
@@ -405,7 +409,9 @@ const run = async (args, opts) => {
             opts['--exact'],
             _verbose,
         );
-        if (!steps.length) {
+        if (steps.length) {
+            errors += await runSteps(steps, name, opts['--all'], filesChanged);
+        } else {
             console.error(skipText(`No steps matching ${name}, checking for jobs`));
             const jobs = getJobsByType(name, filesChanged);
             if (jobs.length) {
@@ -417,8 +423,6 @@ const run = async (args, opts) => {
                 console.log();
                 errors += 1;
             }
-        } else {
-            errors += await runSteps(steps, name, opts['--all'], filesChanged);
         }
     }
 
