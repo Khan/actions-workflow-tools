@@ -274,7 +274,7 @@ const findStepsInWorkflow = (workflow, needle, exact, verbose) => {
                 steps.push({sort: 0, step});
             } else if (step.uses) {
                 const repo = step.uses.split('@')[0];
-                const [owner, name] = repo.split('/');
+                const [_owner, name] = repo.split('/');
                 if (repo.toLowerCase() === needle.toLowerCase()) {
                     steps.push({sort: 1, step});
                 } else if (name.toLowerCase() === needle.toLowerCase()) {
@@ -295,7 +295,7 @@ const findNamedSteps = (name, exact, verbose) => {
     const steps = [];
 
     const parts = name.split(':');
-    if (parts.length == 2 && parts[0].endsWith('.yml')) {
+    if (parts.length === 2 && parts[0].endsWith('.yml')) {
         console.log('yep', parts[0]);
         const data = loadWorkflow(path.join(workflowDir, parts[0]));
         steps.push(...findStepsInWorkflow(data, parts[1], exact, verbose));
@@ -319,7 +319,7 @@ const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
     }
     if (all) {
         let allErrors = 0;
-        for (let {step} of steps) {
+        for (const {step} of steps) {
             const result = await runStep(step, filesChanged);
             if (result) {
                 allErrors += result.errors;
@@ -350,8 +350,7 @@ const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
     return result.errors;
 };
 
-const runType = async (type, filesChanged, verbose) => {
-    console.log(chalk.green(`----- Running jobs matching '${type}' -----`));
+const getJobsByType = (type, filesChanged) => {
     const workflowDir = path.resolve(topLevel, '.github/workflow-templates');
     const allJobs = [];
     fs.readdirSync(workflowDir)
@@ -365,15 +364,7 @@ const runType = async (type, filesChanged, verbose) => {
             );
             allJobs.push(...jobs);
         });
-
-    if (!allJobs.length) {
-        console.error(skipText(`No jobs matching ${type}`));
-        console.log();
-        return 0;
-    } else {
-        console.log();
-        return runJobs(allJobs, filesChanged);
-    }
+    return allJobs;
 };
 
 const run = async (args, opts) => {
@@ -416,7 +407,23 @@ const run = async (args, opts) => {
         }
 
         for (const type of types) {
-            errors += await runType(type, filesChanged);
+            const jobs = getJobsByType(type, filesChanged);
+            if (!jobs.length) {
+                // maybe this is a step
+                errors += await runNamedStep(
+                    args[1],
+                    opts['--exact'],
+                    opts['--all'],
+                    _verbose,
+                    filesChanged,
+                );
+            } else {
+                console.log(
+                    chalk.green(`----- Running ${jobs.length} jobs matching '${type}' -----`),
+                );
+                console.log();
+                errors += await runJobs(jobs, filesChanged);
+            }
         }
     }
 
