@@ -313,9 +313,9 @@ const findNamedSteps = (name, exact, verbose) => {
 const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
     const steps /*:Array<{sort: number, step: Step}>*/ = findNamedSteps(name, exact, verbose);
     if (!steps.length) {
-        console.error(skipText(`No steps matching ${name}`));
+        console.error(errorText(`No steps matching ${name}`));
         console.log();
-        return 0;
+        return 1;
     }
     if (all) {
         let allErrors = 0;
@@ -384,17 +384,9 @@ const run = async (args, opts) => {
 
     let errors = 0;
 
-    if (args[0] === 'step') {
-        errors += await runNamedStep(
-            args[1],
-            opts['--exact'],
-            opts['--all'],
-            _verbose,
-            filesChanged,
-        );
-    } else {
+    if (args[0] === 'job' || !args.length) {
         const types = [];
-        args.forEach(arg => {
+        args.slice(1).forEach(arg => {
             if (typeAliases[arg]) {
                 types.push(...typeAliases[arg]);
             } else {
@@ -408,23 +400,25 @@ const run = async (args, opts) => {
 
         for (const type of types) {
             const jobs = getJobsByType(type, filesChanged);
-            if (!jobs.length) {
-                // maybe this is a step
-                errors += await runNamedStep(
-                    args[1],
-                    opts['--exact'],
-                    opts['--all'],
-                    _verbose,
-                    filesChanged,
-                );
-            } else {
-                console.log(
-                    chalk.green(`----- Running ${jobs.length} jobs matching '${type}' -----`),
-                );
-                console.log();
-                errors += await runJobs(jobs, filesChanged);
-            }
+            console.log(chalk.green(`----- Running ${jobs.length} jobs matching '${type}' -----`));
+            console.log();
+            errors += await runJobs(jobs, filesChanged);
         }
+    } else if (args.length > 1) {
+        console.log(
+            errorText(
+                `Multiple arguments passed; we currently only support running one step at a time.`,
+            ),
+        );
+        errors += 1;
+    } else {
+        errors += await runNamedStep(
+            args[0],
+            opts['--exact'],
+            opts['--all'],
+            _verbose,
+            filesChanged,
+        );
     }
 
     const time = `Finished in ${(Date.now() - startTime) / 1000}s`;
