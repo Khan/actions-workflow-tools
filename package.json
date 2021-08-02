@@ -6,6 +6,7 @@
         "format": "prettier-eslint --write --config .prettierrc '**/*.js'",
         "format-files": "prettier-eslint --write --config .prettierrc",
         "lint": "./node_modules/.bin/eslint .",
+        "actions": "./bin/run.js",
         "test": "jest"
     },
     "bin": {

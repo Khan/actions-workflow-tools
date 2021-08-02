@@ -310,13 +310,7 @@ const findNamedSteps = (name, exact, verbose) => {
     return steps;
 };
 
-const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
-    const steps /*:Array<{sort: number, step: Step}>*/ = findNamedSteps(name, exact, verbose);
-    if (!steps.length) {
-        console.error(errorText(`No steps matching ${name}`));
-        console.log();
-        return 1;
-    }
+const runSteps = async (steps, name, all, filesChanged) => {
     if (all) {
         let allErrors = 0;
         for (const {step} of steps) {
@@ -404,21 +398,28 @@ const run = async (args, opts) => {
             console.log();
             errors += await runJobs(jobs, filesChanged);
         }
-    } else if (args.length > 1) {
-        console.log(
-            errorText(
-                `Multiple arguments passed; we currently only support running one step at a time.`,
-            ),
-        );
-        errors += 1;
     } else {
-        errors += await runNamedStep(
-            args[0],
+        const name = args.join(' '); // so you can say `git actions flow coverage` and it will work
+        const steps /*:Array<{sort: number, step: Step}>*/ = findNamedSteps(
+            name,
             opts['--exact'],
-            opts['--all'],
             _verbose,
-            filesChanged,
         );
+        if (!steps.length) {
+            console.error(skipText(`No steps matching ${name}, checking for jobs`));
+            const jobs = getJobsByType(name, filesChanged);
+            if (jobs.length) {
+                console.log(chalk.green(`Found ${jobs.length} for ${name}`));
+                console.log();
+                errors += await runJobs(jobs, filesChanged);
+            } else {
+                console.error(skipText(`No steps or jobs matching ${name}`));
+                console.log();
+                errors += 1;
+            }
+        } else {
+            errors += await runSteps(steps, name, opts['--all'], filesChanged);
+        }
     }
 
     const time = `Finished in ${(Date.now() - startTime) / 1000}s`;
