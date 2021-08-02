@@ -1153,9 +1153,9 @@ acorn@^7.1.0:
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-7.2.0.tgz#17ea7e40d7c8640ff54a694c889c26f31704effe"
   integrity sha512-apwXVmYVpQ34m/i71vrApRrRKCWQnZZF1+npOD0WV5xZFfwWOmKGQ2RWlfdy9vWITsenisM8M0Qeq8agcFHNiQ==
 
-actions-utils@Khan/actions-utils#v1.2.3:
-  version "1.2.3"
-  resolved "https://codeload.github.com/Khan/actions-utils/tar.gz/c546cd2cdd5751c2fcccea1769cd23f8ac85c6c4"
+"actions-utils@git+https://git@github.com/Khan/actions-utils#v1.2.5":
+  version "1.2.4"
+  resolved "git+https://git@github.com/Khan/actions-utils#6d8556b72761a15ac97ab6d811acd53175bc36b2"
   dependencies:
     "@actions/github" "^2.1.1"
     chalk "^2.4.2"
