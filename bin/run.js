@@ -52,8 +52,10 @@ const debug = (...args) => {
 
 const plural = (num, single, plural) => (num === 1 ? single : plural);
 
+// Match a job id, or a subset of a job id
+// so `lint` will match `lint_and_unit`, but not `flint`
 const matches = (jobId /* :string*/, type) => {
-    return jobId === type || jobId.endsWith('-' + type) || jobId.endsWith('_' + type);
+    return !!jobId.match(new RegExp('(^|[^a-zA-Z0-9])' + type + '($|[^a-zA-Z0-9])', 'i'));
 };
 
 function escapeRegExp(string /*: string*/) {
