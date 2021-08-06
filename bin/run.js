@@ -52,8 +52,10 @@ const debug = (...args) => {
 
 const plural = (num, single, plural) => (num === 1 ? single : plural);
 
+// Match a job id, or a subset of a job id
+// so `lint` will match `lint_and_unit`, but not `flint`
 const matches = (jobId /* :string*/, type) => {
-    return jobId === type || jobId.endsWith('-' + type) || jobId.endsWith('_' + type);
+    return !!jobId.match(new RegExp('(^|[^a-zA-Z0-9])' + type + '($|[^a-zA-Z0-9])', 'i'));
 };
 
 function escapeRegExp(string /*: string*/) {
@@ -274,7 +276,7 @@ const findStepsInWorkflow = (workflow, needle, exact, verbose) => {
                 steps.push({sort: 0, step});
             } else if (step.uses) {
                 const repo = step.uses.split('@')[0];
-                const [owner, name] = repo.split('/');
+                const [_owner, name] = repo.split('/');
                 if (repo.toLowerCase() === needle.toLowerCase()) {
                     steps.push({sort: 1, step});
                 } else if (name.toLowerCase() === needle.toLowerCase()) {
@@ -295,7 +297,7 @@ const findNamedSteps = (name, exact, verbose) => {
     const steps = [];
 
     const parts = name.split(':');
-    if (parts.length == 2 && parts[0].endsWith('.yml')) {
+    if (parts.length === 2 && parts[0].endsWith('.yml')) {
         console.log('yep', parts[0]);
         const data = loadWorkflow(path.join(workflowDir, parts[0]));
         steps.push(...findStepsInWorkflow(data, parts[1], exact, verbose));
@@ -310,16 +312,27 @@ const findNamedSteps = (name, exact, verbose) => {
     return steps;
 };
 
-const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
-    const steps /*:Array<{sort: number, step: Step}>*/ = findNamedSteps(name, exact, verbose);
-    if (!steps.length) {
-        console.error(skipText(`No steps matching ${name}`));
-        console.log();
-        return 0;
+const getJobsWithAlaises = args => {
+    const types = [];
+    args.forEach(arg => {
+        if (typeAliases[arg]) {
+            types.push(...typeAliases[arg]);
+        } else {
+            types.push(arg);
+        }
+    });
+
+    if (!types.length) {
+        types.push(...typeAliases['prepare']);
     }
+
+    return types;
+};
+
+const runSteps = async (steps, name, all, filesChanged) => {
     if (all) {
         let allErrors = 0;
-        for (let {step} of steps) {
+        for (const {step} of steps) {
             const result = await runStep(step, filesChanged);
             if (result) {
                 allErrors += result.errors;
@@ -350,8 +363,7 @@ const runNamedStep = async (name, exact, all, verbose, filesChanged) => {
     return result.errors;
 };
 
-const runType = async (type, filesChanged, verbose) => {
-    console.log(chalk.green(`----- Running jobs matching '${type}' -----`));
+const getJobsByType = (type, filesChanged) => {
     const workflowDir = path.resolve(topLevel, '.github/workflow-templates');
     const allJobs = [];
     fs.readdirSync(workflowDir)
@@ -365,15 +377,7 @@ const runType = async (type, filesChanged, verbose) => {
             );
             allJobs.push(...jobs);
         });
-
-    if (!allJobs.length) {
-        console.error(skipText(`No jobs matching ${type}`));
-        console.log();
-        return 0;
-    } else {
-        console.log();
-        return runJobs(allJobs, filesChanged);
-    }
+    return allJobs;
 };
 
 const run = async (args, opts) => {
@@ -393,30 +397,34 @@ const run = async (args, opts) => {
 
     let errors = 0;
 
-    if (args[0] === 'step') {
-        errors += await runNamedStep(
-            args[1],
-            opts['--exact'],
-            opts['--all'],
-            _verbose,
-            filesChanged,
-        );
-    } else {
-        const types = [];
-        args.forEach(arg => {
-            if (typeAliases[arg]) {
-                types.push(...typeAliases[arg]);
-            } else {
-                types.push(arg);
-            }
-        });
-
-        if (!types.length) {
-            types.push(...typeAliases['prepare']);
+    if (args[0] === 'job' || !args.length) {
+        for (const type of getJobsWithAlaises(args.slice(1))) {
+            const jobs = getJobsByType(type, filesChanged);
+            console.log(chalk.green(`----- Running ${jobs.length} jobs matching '${type}' -----`));
+            console.log();
+            errors += await runJobs(jobs, filesChanged);
         }
-
-        for (const type of types) {
-            errors += await runType(type, filesChanged);
+    } else {
+        const name = args.join(' '); // so you can say `git actions flow coverage` and it will work
+        const steps /*:Array<{sort: number, step: Step}>*/ = findNamedSteps(
+            name,
+            opts['--exact'],
+            _verbose,
+        );
+        if (steps.length) {
+            errors += await runSteps(steps, name, opts['--all'], filesChanged);
+        } else {
+            console.error(skipText(`No steps matching ${name}, checking for jobs`));
+            const jobs = getJobsByType(name, filesChanged);
+            if (jobs.length) {
+                console.log(chalk.green(`Found ${jobs.length} for ${name}`));
+                console.log();
+                errors += await runJobs(jobs, filesChanged);
+            } else {
+                console.error(skipText(`No steps or jobs matching ${name}`));
+                console.log();
+                errors += 1;
+            }
         }
     }
 
