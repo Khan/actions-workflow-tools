@@ -14,7 +14,7 @@
         "make-workflows": "./bin/make-workflows.js"
     },
     "dependencies": {
-        "actions-utils": "git+https://git@github.com/Khan/actions-utils#v1.2.5",
+        "actions-utils": "git+https://git@github.com/Khan/actions-utils#v1.5.0",
         "chalk": "^2.4.2",
         "download-git-repo": "^3.0.2",
         "js-yaml": "^3.13.1",
